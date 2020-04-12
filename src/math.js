@@ -22,6 +22,12 @@ export var sign = Math.sign || function(x) { return x > 0 ? 1 : x < 0 ? -1 : 0; 
 export var sqrt = Math.sqrt;
 export var tan = Math.tan;
 
+export var hypot = Math.hypot || function() {
+  var sum = 0, i = arguments.length;
+  while (i--) sum += arguments[i] * arguments[i];
+  return sqrt(sum);
+};
+
 export function acos(x) {
   return x > 1 ? 0 : x < -1 ? pi : Math.acos(x);
 }
