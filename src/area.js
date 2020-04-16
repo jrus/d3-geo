@@ -27,7 +27,7 @@ export var areaStream = {
     this.lineStart = this.lineEnd = this.point = noop;
   },
   sphere: function() {
-    areaSum = tau;
+    areaSum += tau;
   }
 };
 

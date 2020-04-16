@@ -1,12 +1,10 @@
-import adder from "./adder.js";
-import {abs, atan2, cos, radians, sin, sqrt} from "./math.js";
+import {hypot} from "./math.js";
 import noop from "./noop.js";
+import {planisphere} from "./planisphere.js"
 import stream from "./stream.js";
 
-var lengthSum = adder(),
-    lambda0,
-    sinPhi0,
-    cosPhi0;
+var x_prev, y_prev, q_prev, lengthSum = 0;
+
 
 var lengthStream = {
   sphere: noop,
@@ -26,28 +24,23 @@ function lengthLineEnd() {
   lengthStream.point = lengthStream.lineEnd = noop;
 }
 
-function lengthPointFirst(lambda, phi) {
-  lambda *= radians, phi *= radians;
-  lambda0 = lambda, sinPhi0 = sin(phi), cosPhi0 = cos(phi);
+function lengthPointFirst(longitude, latitude) {
+  var [x, y] = planisphere([longitude, latitude]);
+  (x_prev = x), (y_prev = y);
+  q_prev = 1 / (1 + x_prev * x_prev + y_prev * y_prev);
   lengthStream.point = lengthPoint;
 }
 
-function lengthPoint(lambda, phi) {
-  lambda *= radians, phi *= radians;
-  var sinPhi = sin(phi),
-      cosPhi = cos(phi),
-      delta = abs(lambda - lambda0),
-      cosDelta = cos(delta),
-      sinDelta = sin(delta),
-      x = cosPhi * sinDelta,
-      y = cosPhi0 * sinPhi - sinPhi0 * cosPhi * cosDelta,
-      z = sinPhi0 * sinPhi + cosPhi0 * cosPhi * cosDelta;
-  lengthSum.add(atan2(sqrt(x * x + y * y), z));
-  lambda0 = lambda, sinPhi0 = sinPhi, cosPhi0 = cosPhi;
+function lengthPoint(longitude, latitude) {
+  var [x, y] = planisphere([longitude, latitude]);
+  var q = 1 / (1 + x * x + y * y);
+  lengthSum += Math.asin(hypot(
+    q - q_prev, q * x - q_prev * x_prev, q * y - q_prev * y_prev));
+  (q_prev = q), (x_prev = x), (y_prev = y);
 }
 
 export default function(object) {
-  lengthSum.reset();
+  lengthSum = 0;
   stream(object, lengthStream);
-  return +lengthSum;
+  return 2 * lengthSum;
 }
