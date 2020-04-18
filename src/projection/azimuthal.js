@@ -1,4 +1,4 @@
-import {asin, atan2, cos, sin, sqrt} from "../math.js";
+import {asin, atan2, cos, hypot, sin} from "../math.js";
 
 export function azimuthalRaw(scale) {
   return function(x, y) {
@@ -14,7 +14,7 @@ export function azimuthalRaw(scale) {
 
 export function azimuthalInvert(angle) {
   return function(x, y) {
-    var z = sqrt(x * x + y * y),
+    var z = hypot(x, y),
         c = angle(z),
         sc = sin(c),
         cc = cos(c);

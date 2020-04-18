@@ -1,4 +1,4 @@
-import {asin, atan2, cos, degrees, epsilon, epsilon2, radians, sin, sqrt} from "./math.js";
+import {asin, atan2, cos, degrees, epsilon, epsilon2, hypot, radians, sin, sqrt} from "./math.js";
 import noop from "./noop.js";
 import stream from "./stream.js";
 
@@ -58,7 +58,7 @@ function centroidLinePoint(lambda, phi) {
       x = cosPhi * cos(lambda),
       y = cosPhi * sin(lambda),
       z = sin(phi),
-      w = atan2(sqrt((w = y0 * z - z0 * y) * w + (w = z0 * x - x0 * z) * w + (w = x0 * y - y0 * x) * w), x0 * x + y0 * y + z0 * z);
+      w = atan2(hypot(y0 * z - z0 * y, z0 * x - x0 * z, x0 * y - y0 * x), x0 * x + y0 * y + z0 * z);
   W1 += w;
   X1 += w * (x0 + (x0 = x));
   Y1 += w * (y0 + (y0 = y));
@@ -101,7 +101,7 @@ function centroidRingPoint(lambda, phi) {
       cx = y0 * z - z0 * y,
       cy = z0 * x - x0 * z,
       cz = x0 * y - y0 * x,
-      m = sqrt(cx * cx + cy * cy + cz * cz),
+      m = hypot(cx, cy, cz),
       w = asin(m), // line weight = angle
       v = m && -w / m; // area weight multiplier
   X2 += v * cx;

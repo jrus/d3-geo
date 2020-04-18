@@ -1,4 +1,4 @@
-import {sqrt} from "../math.js";
+import {hypot} from "../math.js";
 
 // TODO Enforce positive area for exterior, negative area for interior?
 
@@ -57,7 +57,7 @@ function centroidPointFirstLine(x, y) {
 }
 
 function centroidPointLine(x, y) {
-  var dx = x - x0, dy = y - y0, z = sqrt(dx * dx + dy * dy);
+  var dx = x - x0, dy = y - y0, z = hypot(dx, dy);
   X1 += z * (x0 + x) / 2;
   Y1 += z * (y0 + y) / 2;
   Z1 += z;
@@ -84,7 +84,7 @@ function centroidPointFirstRing(x, y) {
 function centroidPointRing(x, y) {
   var dx = x - x0,
       dy = y - y0,
-      z = sqrt(dx * dx + dy * dy);
+      z = hypot(dx, dy);
 
   X1 += z * (x0 + x) / 2;
   Y1 += z * (y0 + y) / 2;

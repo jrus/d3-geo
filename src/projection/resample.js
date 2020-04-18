@@ -1,5 +1,5 @@
 import {cartesian} from "../cartesian.js";
-import {abs, asin, atan2, cos, epsilon, radians, sqrt} from "../math.js";
+import {abs, asin, atan2, cos, epsilon, hypot, radians} from "../math.js";
 import {transformer} from "../transform.js";
 
 var maxDepth = 16, // maximum depth of subdivision
@@ -28,7 +28,7 @@ function resample(project, delta2) {
       var a = a0 + a1,
           b = b0 + b1,
           c = c0 + c1,
-          m = sqrt(a * a + b * b + c * c),
+          m = hypot(a, b, c),
           phi2 = asin(c /= m),
           lambda2 = abs(abs(c) - 1) < epsilon || abs(lambda0 - lambda1) < epsilon ? (lambda0 + lambda1) / 2 : atan2(b, a),
           p = project(lambda2, phi2),

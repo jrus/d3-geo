@@ -1,4 +1,4 @@
-import {asin, atan2, cos, sin, sqrt} from "./math.js";
+import {asin, atan2, cos, hypot, sin} from "./math.js";
 
 export function spherical(cartesian) {
   return [atan2(cartesian[1], cartesian[0]), asin(cartesian[2])];
@@ -28,6 +28,6 @@ export function cartesianScale(vector, k) {
 
 // TODO return d
 export function cartesianNormalizeInPlace(d) {
-  var l = sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+  var l = hypot(d[0], d[1], d[2]);
   d[0] /= l, d[1] /= l, d[2] /= l;
 }

@@ -1,5 +1,5 @@
 import adder from "../adder.js";
-import {sqrt} from "../math.js";
+import {hypot} from "../math.js";
 import noop from "../noop.js";
 
 var lengthSum = adder(),
@@ -38,7 +38,7 @@ function lengthPointFirst(x, y) {
 
 function lengthPoint(x, y) {
   x0 -= x, y0 -= y;
-  lengthSum.add(sqrt(x0 * x0 + y0 * y0));
+  lengthSum.add(hypot(x0, y0));
   x0 = x, y0 = y;
 }
 
