@@ -18,7 +18,20 @@ export default function interpolate(a, b) {
       wb = 1 - zb,
       denom = 1 / ((wa*zb + wb*za) +
         hypot(wa*zb + wb*za, wa*xb + wb*xa, wa*yb + wb*ya)),
-      xm = (wa*xb + wb*xa) * denom,  // midpoint
+      xh = xb - xa,
+      yh = yb - ya;
+
+  // edge case when the midpoint is near infinity and we can let u/v = -1
+  if (denom*denom == Infinity) {
+    return function interpolate(t) {
+      var q = t / (2*t - 1);  // t / lerp(-1,1,t)
+      return planisphere.inverse([
+        xa + q * xh,
+        ya + q * yh
+      ]);
+    }
+  }
+  var xm = (wa*xb + wb*xa) * denom,  // midpoint
       ym = (wa*yb + wb*ya) * denom,
 
       // See https://observablehq.com/@jrus/circle-arc-interpolation
@@ -26,8 +39,6 @@ export default function interpolate(a, b) {
       yu = ym - ya,
       xv = xb - xm,
       yv = yb - ym,
-      xh = xb - xa,
-      yh = yb - ya,
       x_uvh = (xu*xv + yu*yv) * xh + (xu*yv - xv*yu) * yh,
       y_uvh = (xu*xv + yu*yv) * yh - (xu*yv - xv*yu) * xh,
       x_uuh = (xu*xu + yu*yu) * xh,
