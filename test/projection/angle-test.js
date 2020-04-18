@@ -54,3 +54,13 @@ tape("projection.angle(…) wraps around 360°", function(test) {
   test.equal(projection.angle(), 0);
   test.end();
 });
+
+tape("identity.angle(…) rotates geoIdentity", function(test) {
+  var projection = d3.geoIdentity().angle(-45), SQRT2_2 = Math.sqrt(2) / 2;
+  test.inDelta(projection.angle(), -45);
+  test.projectionEqual(projection, [0, 0], [0, 0]);
+  test.projectionEqual(projection, [1, 0], [SQRT2_2, SQRT2_2]);
+  test.projectionEqual(projection, [-1, 0], [-SQRT2_2, -SQRT2_2]);
+  test.projectionEqual(projection, [0, 1], [-SQRT2_2, SQRT2_2]);
+  test.end();
+});
