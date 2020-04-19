@@ -18,8 +18,7 @@ tape("geoInterpolate(a, b) returns the expected values when a and b lie on a mer
   test.end();
 });
 
-
-tape("geoInterpolate(a, b) passes near the pole a and b are opposite each-other", function(test) {
+tape("geoInterpolate(a, b) passes through the pole a and b are opposite each-other", function(test) {
   test.inDelta(d3.geoInterpolate([30, -30], [-150, -30])(0.5)[1], -90, 1e-6);
   test.inDelta(d3.geoInterpolate([30, 30], [-150, 30])(0.5)[1], 90, 1e-6);
   test.end();

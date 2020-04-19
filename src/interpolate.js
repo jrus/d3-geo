@@ -21,8 +21,8 @@ export default function interpolate(a, b) {
       xh = xb - xa,
       yh = yb - ya;
 
-  // edge case when the midpoint is near infinity and we can let u/v = -1
-  if (denom*denom == Infinity) {
+  // edge case when the midpoint is near infinity
+  if (denom*denom === Infinity) {
     return function interpolate(t) {
       var q = t / (2*t - 1);  // t / lerp(-1,1,t)
       return planisphere.inverse([
@@ -31,26 +31,46 @@ export default function interpolate(a, b) {
       ]);
     }
   }
+  
   var xm = (wa*xb + wb*xa) * denom,  // midpoint
       ym = (wa*yb + wb*ya) * denom,
-
-      // See https://observablehq.com/@jrus/circle-arc-interpolation
       xu = xm - xa,
       yu = ym - ya,
       xv = xb - xm,
-      yv = yb - ym,
-      x_uvh = (xu*xv + yu*yv) * xh + (xu*yv - xv*yu) * yh,
-      y_uvh = (xu*xv + yu*yv) * yh - (xu*yv - xv*yu) * xh,
-      x_uuh = (xu*xu + yu*yu) * xh,
-      y_uuh = (xu*xu + yu*yu) * yh;
+      yv = yb - ym;
+  
+  // See https://observablehq.com/@jrus/circle-arc-interpolation
+  // for basic explanation of this interpolation method.
+  
+  // To avoid loss of significance, pick whether to anchor our
+  // interpolation at either a or b depending on which one is
+  // closer to the origin. This helps protect against the edge
+  // case where a is close to the pole at infinity or b is close
+  // to the pole at the origin, at the slight computational expense
+  // of one extra branch here.
+  var reverse = +(wa > wb),
+      x0, y0, x_p0, y_p0, x_p1, y_p1;
+  if (!reverse) {
+    x0 = xa, y0 = ya,
+    x_p0 = (xu*xv + yu*yv) * xh + (xu*yv - xv*yu) * yh; // uvh
+    y_p0 = (xu*xv + yu*yv) * yh - (xu*yv - xv*yu) * xh;
+    x_p1 = (xu*xu + yu*yu) * xh; // uuh
+    y_p1 = (xu*xu + yu*yu) * yh;
+  } else {
+    x0 = xb, y0 = yb,
+    x_p0 = (xv*xv + yv*yv) * xh; // vvh
+    y_p0 = (xv*xv + yv*yv) * yh;
+    x_p1 = (xu*xv + yu*yv) * xh - (xu*yv - xv*yu) * yh; // vuh
+    y_p1 = (xu*xv + yu*yv) * yh + (xu*yv - xv*yu) * xh;
+  }
   return function interpolate(t) {
     var t_ = 1 - t,
         x_q = xv*t_ + xu*t,
         y_q = yv*t_ + yu*t,
-        q = t / (x_q*x_q + y_q*y_q);  // t / lerp(v,u,t)^2
+        q = (t - reverse) / (x_q*x_q + y_q*y_q);
     return planisphere.inverse([
-      xa + q * (x_uvh*t_ + x_uuh*t),  // a + q * lerp(uvh,uuh,t)
-      ya + q * (y_uvh*t_ + y_uuh*t)
+      x0 + q * (x_p0*t_ + x_p1*t),
+      y0 + q * (y_p0*t_ + y_p1*t)
     ]);
   }
 }
