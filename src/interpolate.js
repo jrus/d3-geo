@@ -67,10 +67,10 @@ export default function interpolate(a, b) {
   // We redefine u and v to be [0, 0] and [1, 0] or vice versa
   // as a hack so the function below still behaves as desired.
   if ((xh*xh + yh*yh) === Infinity) {
-    x_p1 = (1 - reverse) * xu;
-    y_p1 = (1 - reverse) * yu;
-    x_p0 = reverse * xv;
-    y_p0 = reverse * yv;
+    x_p0 = (1 - reverse) * xu;
+    y_p0 = (1 - reverse) * yu;
+    x_p1 = reverse * xv;
+    y_p1 = reverse * yv;
     xv = 1 - reverse;
     xu = reverse;
     yv = yu = 0;
