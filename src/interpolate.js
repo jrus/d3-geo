@@ -5,6 +5,7 @@ export default function interpolate(a, b) {
   var [xa, ya] = planisphere(a),
       [xb, yb] = planisphere(b);
 
+  // if a == b, don’t bother interpolating
   if ((xa === xb) & (ya === yb)) {
     return function () { return a; }
   }
@@ -34,13 +35,10 @@ export default function interpolate(a, b) {
   
   var xm = (wa*xb + wb*xa) * denom,  // midpoint
       ym = (wa*yb + wb*ya) * denom,
-      xu = xm - xa,
-      yu = ym - ya,
-      xv = xb - xm,
-      yv = yb - ym;
+      xu = xm - xa, yu = ym - ya,
+      xv = xb - xm, yv = yb - ym;
   
   // See https://observablehq.com/@jrus/circle-arc-interpolation
-  // for basic explanation of this interpolation method.
   
   // To avoid loss of significance, pick whether to anchor our
   // interpolation at either a or b depending on which one is
@@ -49,20 +47,34 @@ export default function interpolate(a, b) {
   // to the pole at the origin, at the slight computational expense
   // of one extra branch here.
   var reverse = +(wa > wb),
-      x0, y0, x_p0, y_p0, x_p1, y_p1;
+      x0, y0, x_p0, y_p0, x_p1, y_p1;    
   if (!reverse) {
-    x0 = xa, y0 = ya,
+    x0 = xa;
+    y0 = ya;
     x_p0 = (xu*xv + yu*yv) * xh + (xu*yv - xv*yu) * yh; // uvh
     y_p0 = (xu*xv + yu*yv) * yh - (xu*yv - xv*yu) * xh;
     x_p1 = (xu*xu + yu*yu) * xh; // uuh
     y_p1 = (xu*xu + yu*yu) * yh;
   } else {
-    x0 = xb, y0 = yb,
+    x0 = xb;
+    y0 = yb;
     x_p0 = (xv*xv + yv*yv) * xh; // vvh
     y_p0 = (xv*xv + yv*yv) * yh;
     x_p1 = (xu*xv + yu*yv) * xh - (xu*yv - xv*yu) * yh; // vuh
     y_p1 = (xu*xv + yu*yv) * yh + (xu*yv - xv*yu) * xh;
   }
+  
+  // edge case where a or b is infinite
+  // We redefine u and v to be [0, 0] and [0, 1] or vice versa
+  // as a hack so the function below still behaves as desired.
+  if ((xh*xh + yh*yh) === Infinity) {
+    x_p1 = reverse * xv + (1 - reverse) * xu;
+    y_p1 = reverse * yv + (1 - reverse) * yu;
+    xv = 1 - reverse;
+    xu = reverse;
+    x_p0 = y_p0 = yv = yu = 0;
+  }
+  
   return function interpolate(t) {
     var t_ = 1 - t,
         x_q = xv*t_ + xu*t,

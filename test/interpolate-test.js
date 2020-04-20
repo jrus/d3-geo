@@ -23,3 +23,11 @@ tape("geoInterpolate(a, b) passes through the pole a and b are opposite each-oth
   test.inDelta(d3.geoInterpolate([30, 30], [-150, 30])(0.5)[1], 90, 1e-6);
   test.end();
 });
+
+tape("geoInterpolate(a, b) works when a or b is at either pole", function(test) {
+  test.inDelta(d3.geoInterpolate([60, -90], [30, -50])(0.5), [30, -70], 1e-6);
+  test.inDelta(d3.geoInterpolate([30, -50], [60, -90])(0.5), [30, -70], 1e-6);
+  test.inDelta(d3.geoInterpolate([60, 90], [30, 50])(0.5), [30, 70], 1e-6);
+  test.inDelta(d3.geoInterpolate([30, 50], [60, 90])(0.5), [30, 70], 1e-6);
+  test.end();
+});
