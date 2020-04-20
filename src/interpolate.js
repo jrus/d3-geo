@@ -11,7 +11,6 @@ export default function interpolate(a, b) {
   }
   
   // TODO: make sure we still pick a meaningful midpoint for a antipodal to b
-  // TODO: properly handle the case where a or b is the pole at infinity
 
   var za = 0.5*(1 - xa*xa - ya*ya), 
       zb = 0.5*(1 - xb*xb - yb*yb),
@@ -65,14 +64,16 @@ export default function interpolate(a, b) {
   }
   
   // edge case where a or b is infinite
-  // We redefine u and v to be [0, 0] and [0, 1] or vice versa
+  // We redefine u and v to be [0, 0] and [1, 0] or vice versa
   // as a hack so the function below still behaves as desired.
   if ((xh*xh + yh*yh) === Infinity) {
-    x_p1 = reverse * xv + (1 - reverse) * xu;
-    y_p1 = reverse * yv + (1 - reverse) * yu;
+    x_p1 = (1 - reverse) * xu;
+    y_p1 = (1 - reverse) * yu;
+    x_p0 = reverse * xv;
+    y_p0 = reverse * yv;
     xv = 1 - reverse;
     xu = reverse;
-    x_p0 = y_p0 = yv = yu = 0;
+    yv = yu = 0;
   }
   
   return function interpolate(t) {
