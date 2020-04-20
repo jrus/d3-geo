@@ -63,7 +63,7 @@ export default function interpolate(a, b) {
     y_p0 = (xv*xv + yv*yv) * yh;
     x_p1 = (xu*xv + yu*yv) * xh - (xu*yv - xv*yu) * yh; // vuh
     y_p1 = (xu*xv + yu*yv) * yh + (xu*yv - xv*yu) * xh;
-  }f
+  }
 
   // edge case where a or b is infinite
   // We redefine u and v to be [0, 0] and [1, 0] or vice versa
