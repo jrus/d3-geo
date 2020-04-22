@@ -41,10 +41,6 @@ export default function interpolate(a, b) {
       xv = xb - xm,
       yv = yb - ym,
       // reverse == true if a is further away from the origin than b.
-      // In that case, we anchor interpolation at b. This helps to
-      // protect against loss of significance in the case where b is
-      // much closer to the origin than a, and a + (b - a) would be
-      // rounded heavily enough to not be especially close to b.
       reverse = +(wa > wb),
       forward = 1 - reverse;
 
@@ -60,17 +56,19 @@ export default function interpolate(a, b) {
     }
   }
 
-  var x0, y0, x_p0, y_p0, x_p1, y_p1;
+  var x_p0, y_p0, x_p1, y_p1;
   if (forward) {
-    x0 = xa;
-    y0 = ya;
     x_p0 = (xu*xv + yu*yv) * xh + (xu*yv - xv*yu) * yh; // uvh
     y_p0 = (xu*xv + yu*yv) * yh - (xu*yv - xv*yu) * xh;
     x_p1 = (xu*xu + yu*yu) * xh; // uuh
     y_p1 = (xu*xu + yu*yu) * yh;
   } else {
-    x0 = xb;
-    y0 = yb;
+    // In the case where a is further from the origin than b
+    // we anchor interpolation at b. This protects against
+    // loss of significance in the case where b is much closer
+    // to the origin than a, for which a + (b - a) might be
+    // rounded heavily enough to not be especially close to b.
+    xa = xb, ya = yb;
     x_p0 = (xv*xv + yv*yv) * xh; // vvh
     y_p0 = (xv*xv + yv*yv) * yh;
     x_p1 = (xu*xv + yu*yv) * xh - (xu*yv - xv*yu) * yh; // vuh
@@ -83,8 +81,8 @@ export default function interpolate(a, b) {
         y_q = yv*t_ + yu*t,
         q = (t - reverse) / (x_q*x_q + y_q*y_q);
     return planisphere.inverse([
-      x0 + q * (x_p0*t_ + x_p1*t),
-      y0 + q * (y_p0*t_ + y_p1*t)
+      xa + q * (x_p0*t_ + x_p1*t),
+      ya + q * (y_p0*t_ + y_p1*t)
     ]);
   }
 }
