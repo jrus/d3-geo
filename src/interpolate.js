@@ -1,6 +1,8 @@
 import {hypot} from "./math.js";
 import {planisphere} from "./planisphere.js";
 
+// See https://observablehq.com/@jrus/circle-arc-interpolation
+
 export default function interpolate(a, b) {
   var [xa, ya] = planisphere(a),
       [xb, yb] = planisphere(b);
@@ -37,18 +39,28 @@ export default function interpolate(a, b) {
       xu = xm - xa,
       yu = ym - ya,
       xv = xb - xm,
-      yv = yb - ym;
+      yv = yb - ym,
+      // reverse == true if a is further away from the origin than b.
+      // In that case, we anchor interpolation at b. This helps to
+      // protect against loss of significance in the case where b is
+      // much closer to the origin than a, and a + (b - a) would be
+      // rounded heavily enough to not be especially close to b.
+      reverse = +(wa > wb),
+      forward = 1 - reverse;
 
-  // See https://observablehq.com/@jrus/circle-arc-interpolation
+  // edge case where a or b is infinite
+  if ((xh*xh + yh*yh) === Infinity) {
+    if (reverse) xa = xb, ya = yb, xu = -xv, yu = -yv;
+    return function interpolate(t) {
+      var q = - (t - reverse) / (t - forward);
+      return planisphere.inverse([
+        xa + q * xu,
+        ya + q * yu
+      ]);
+    }
+  }
 
-  // To avoid loss of significance, pick whether to anchor our
-  // interpolation at either a or b depending on which one is
-  // closer to the origin. This helps protect against the edge
-  // case where a is close to the pole at infinity or b is close
-  // to the pole at the origin, at the slight computational expense
-  // of one extra branch here.
-  var reverse = +(wa > wb), forward = 1 - reverse,
-      x0, y0, x_p0, y_p0, x_p1, y_p1;    
+  var x0, y0, x_p0, y_p0, x_p1, y_p1;
   if (forward) {
     x0 = xa;
     y0 = ya;
@@ -63,19 +75,6 @@ export default function interpolate(a, b) {
     y_p0 = (xv*xv + yv*yv) * yh;
     x_p1 = (xu*xv + yu*yv) * xh - (xu*yv - xv*yu) * yh; // vuh
     y_p1 = (xu*xv + yu*yv) * yh + (xu*yv - xv*yu) * xh;
-  }
-
-  // edge case where a or b is infinite
-  // We redefine u and v to be [0, 0] and [1, 0] or vice versa
-  // as a hack so the function below still behaves as desired.
-  if ((xh*xh + yh*yh) === Infinity) {
-    x_p0 = forward * xu;
-    y_p0 = forward * yu;
-    x_p1 = reverse * xv;
-    y_p1 = reverse * yv;
-    xv = forward;
-    xu = reverse;
-    yv = yu = 0;
   }
 
   return function interpolate(t) {
