@@ -3,9 +3,15 @@ import noop from "./noop.js";
 import {planisphere} from "./planisphere.js"
 import stream from "./stream.js";
 
-var x_prev, y_prev, q_prev, lengthSum = 0;
+var x_prev, y_prev, z_prev, lengthSum = 0;
 
-
+// The theory of this computation of spherical arclength
+// from stereographic coordinates is that we can take
+// the stereo coordinates x, y to represent the point (1, x, y)
+// and then we can invert across a unit sphere to yield
+// points on the unit-diameter sphere z^2 + x^2 + y^2 = z.
+// To get from chord-length on this sphere to arclength,
+// we can take the arcsine.
 var lengthStream = {
   sphere: noop,
   point: noop,
@@ -26,18 +32,20 @@ function lengthLineEnd() {
 
 function lengthPointFirst(longitude, latitude) {
   var [x, y] = planisphere([longitude, latitude]);
-  (x_prev = x), (y_prev = y);
-  q_prev = 1 / (1 + x_prev * x_prev + y_prev * y_prev);
+  z_prev = 1 / (1 + x * x + y * y);
+  (x_prev = x * z_prev), (y_prev = y * z_prev);
   lengthStream.point = lengthPoint;
 }
 
 function lengthPoint(longitude, latitude) {
   var [x, y] = planisphere([longitude, latitude]);
-  var q = 1 / (1 + x * x + y * y);
-  if (q === 0) x = y = 0; // handle pole at infinity
+  var z = 1 / (1 + x * x + y * y);
+  if (z === 0) x = y = 0; // handle pole at infinity
+  x *= z;
+  y *= z;
   lengthSum += Math.asin(hypot(
-    q - q_prev, q * x - q_prev * x_prev, q * y - q_prev * y_prev));
-  (q_prev = q), (x_prev = x), (y_prev = y);
+    z - z_prev, x - x_prev, y - y_prev));
+  (z_prev = z), (x_prev = x), (y_prev = y);
 }
 
 export default function(object) {
