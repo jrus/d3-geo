@@ -34,6 +34,7 @@ function lengthPointFirst(longitude, latitude) {
 function lengthPoint(longitude, latitude) {
   var [x, y] = planisphere([longitude, latitude]);
   var q = 1 / (1 + x * x + y * y);
+  if (q === 0) x = y = 0; // handle pole at infinity
   lengthSum += Math.asin(hypot(
     q - q_prev, q * x - q_prev * x_prev, q * y - q_prev * y_prev));
   (q_prev = q), (x_prev = x), (y_prev = y);
