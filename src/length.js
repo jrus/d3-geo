@@ -1,4 +1,4 @@
-import {hypot} from "./math.js";
+import {asin, hypot} from "./math.js";
 import noop from "./noop.js";
 import {planisphere} from "./planisphere.js"
 import stream from "./stream.js";
@@ -40,10 +40,10 @@ function lengthPointFirst(longitude, latitude) {
 function lengthPoint(longitude, latitude) {
   var [x, y] = planisphere([longitude, latitude]);
   var z = 1 / (1 + x * x + y * y);
-  if (z === 0) x = y = 0; // handle pole at infinity
+  if (z === 0) x = y = 0; // avoid NaN when x or y is infinite
   x *= z;
   y *= z;
-  lengthSum += Math.asin(hypot(
+  lengthSum += asin(hypot(
     z - z_prev, x - x_prev, y - y_prev));
   (z_prev = z), (x_prev = x), (y_prev = y);
 }
