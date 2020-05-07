@@ -1,5 +1,5 @@
 import {cartesian} from "../cartesian.js";
-import {asin, atan2, cos, epsilon, hypot, radians} from "../math.js";
+import {abs, asin, atan2, cos, epsilon, hypot, radians} from "../math.js";
 import {transformer} from "../transform.js";
 
 var maxDepth = 16, // maximum depth of subdivision
@@ -20,11 +20,11 @@ function resampleNone(project) {
 
 function resample(project, delta2) {
 
-  function resampleLineTo(x0, y0, lambda0, a0, b0, c0, x1, y1, lambda1, a1, b1, c1, depth, stream) {
+  function resampleLineTo(x0, y0, lon0, a0, b0, c0, x1, y1, lon1, a1, b1, c1, depth, stream) {
     var dx = x1 - x0,
         dy = y1 - y0,
         d2 = dx * dx + dy * dy;
-        
+
     // terminate if distance between ends is less than 2 * delta or recursion depth exceeded
     if (d2 > 4 * delta2 && depth--) {
 
@@ -34,37 +34,35 @@ function resample(project, delta2) {
           cm = c0 + c1,
           scale = 1 / hypot(am, bm, cm);
       am *= scale, bm *= scale, cm *= scale;
-      
-      // get geo coordinates of midpoint; apply projection
-      var phi2 = asin(cm),
-          lambda2 = atan2(bm, am);
-         
-      if ((1 - cm*cm) < 2 * epsilon  // midpoint near north/south pole
-          || (lambda0 - lambda1)*(lambda0 - lambda1) < epsilon*epsilon) // very close longitudes
-        lambda2 = 0.5 * (lambda0 + lambda1);
-      
-      var p = project(lambda2, phi2),
-          xm = p[0],
-          ym = p[1],
-      
+
+      // geo coordinates of midpoint
+      var latm = asin(cm),
+          lonm = atan2(bm, am);
+
+      // fix edge case for midpoint near north/south pole or very close longitudes
+      if ((1 - cm*cm) < 2 * epsilon || abs(lon1 - lon0) < epsilon)
+        lonm = 0.5 * (lon0 + lon1);
+
+      var [xm, ym] = project(lonm, latm),
+
           // displacement from first endpoint to midpoint
           dx2 = xm - x0,
           dy2 = ym - y0,
-          
+
           // parallelogram area between p0, p1, pm
           darea = dy * dx2 - dx * dy2,
           dperp = darea * darea * (1 / d2),
           // proportional parallel distance between projected midpoint and segment midpoint
           dpara = (dx * dx2 + dy * dy2) * (1 / d2) - 0.5;
-          
+
       if (dperp > delta2          // perpendicular distance to midpoint too big
           || dpara * dpara > 0.09 // projected midpoint too far from segment midpoint
           || a0 * a1 + b0 * b1 + c0 * c1 < cosMinDistance) { // angular distance too big
 
         // recursively bisect
-        resampleLineTo(x0, y0, lambda0, a0, b0, c0, xm, ym, lambda2, am, bm, cm, depth, stream);
+        resampleLineTo(x0, y0, lon0, a0, b0, c0, xm, ym, lonm, am, bm, cm, depth, stream);
         stream.point(xm, ym);
-        resampleLineTo(xm, ym, lambda2, am, bm, cm, x1, y1, lambda1, a1, b1, c1, depth, stream);
+        resampleLineTo(xm, ym, lonm, am, bm, cm, x1, y1, lon1, a1, b1, c1, depth, stream);
       }
     }
   }
