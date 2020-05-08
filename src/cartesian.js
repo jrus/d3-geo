@@ -17,6 +17,14 @@ export function cartesianCross(a, b) {
   return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 }
 
+export function cartesianMidpoint(a, b) {
+  var m0 = a[0] + b[0],
+      m1 = a[1] + b[1],
+      m2 = a[2] + b[2],
+      scale = 1 / hypot(m0, m1, m2);
+  return [m0 * scale, m1 * scale, m2 * scale];
+}
+
 // TODO return a
 export function cartesianAddInPlace(a, b) {
   a[0] += b[0], a[1] += b[1], a[2] += b[2];

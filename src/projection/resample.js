@@ -1,5 +1,5 @@
-import {cartesian} from "../cartesian.js";
-import {abs, asin, atan2, cos, epsilon, hypot, radians} from "../math.js";
+import {cartesian, cartesianDot, cartesianMidpoint} from "../cartesian.js";
+import {abs, asin, atan2, cos, epsilon, radians} from "../math.js";
 import {transformer} from "../transform.js";
 
 var maxDepth = 16, // maximum depth of subdivision
@@ -20,55 +20,53 @@ function resampleNone(project) {
 
 function resample(project, delta2) {
 
-  function resampleLineTo(x0, y0, lon0, a0, b0, c0, x1, y1, lon1, a1, b1, c1, depth, stream) {
-    var dx = x1 - x0,
-        dy = y1 - y0,
-        d2 = dx * dx + dy * dy;
+  // Test if the projected midpoint m is close enough to the segment
+  // midpoint between a and b that we can adequately approximate the
+  // arc a-m-b using a straight line segment
+  function midpointTooFar(a, m, b) {
+    var [xa, ya] = a, [xm, ym] = m, [xb, yb] = b,
+        dx = xb - xa, dy = yb - ya,
+        qinv = 1 / (dx*dx + dy*dy),
+        dx2 = xm - xa, dy2 = ym - ya,
+        // parallelogram area between p0, p1, pm
+        darea = dy * dx2 - dx * dy2,
+        // proportional parallel distance between projected midpoint and segment midpoint
+        dpara = (dx * dx2 + dy * dy2) * qinv - 0.5;
+    return (darea * darea * qinv > delta2 // perpendicular distance to midpoint too big
+            || dpara * dpara > 0.09);     // projected midpoint too far from segment midpoint
+  }
+
+  function distance2(a, b) {
+    var dx = b[0] - a[0],
+        dy = b[1] - a[1];
+    return dx * dx + dy * dy;
+  }
+
+  function resampleLineTo(p0, lon0, c0, p1, lon1, c1, depth, stream) {
 
     // terminate if distance between ends is less than 2 * delta or recursion depth exceeded
-    if (d2 > 4 * delta2 && depth--) {
-
-      // find midpoint in cartesian coordinates
-      var am = a0 + a1,
-          bm = b0 + b1,
-          cm = c0 + c1,
-          scale = 1 / hypot(am, bm, cm);
-      am *= scale, bm *= scale, cm *= scale;
-
-      // geo coordinates of midpoint
-      var latm = asin(cm),
-          lonm = atan2(bm, am);
+    if (distance2(p0, p1) > 4 * delta2 && depth--) {
+      var cm = cartesianMidpoint(c0, c1),
+          latm = asin(cm[2]), // geo coordinates of midpoint
+          lonm = atan2(cm[1], cm[0]);
 
       // fix edge case for midpoint near north/south pole or very close longitudes
-      if ((1 - cm*cm) < 2 * epsilon || abs(lon1 - lon0) < epsilon)
+      if ((1 - cm[2]*cm[2]) < 2 * epsilon || abs(lon1 - lon0) < epsilon)
         lonm = 0.5 * (lon0 + lon1);
 
-      var [xm, ym] = project(lonm, latm),
+      var pm = project(lonm, latm);
 
-          // displacement from first endpoint to midpoint
-          dx2 = xm - x0,
-          dy2 = ym - y0,
-
-          // parallelogram area between p0, p1, pm
-          darea = dy * dx2 - dx * dy2,
-          dperp = darea * darea * (1 / d2),
-          // proportional parallel distance between projected midpoint and segment midpoint
-          dpara = (dx * dx2 + dy * dy2) * (1 / d2) - 0.5;
-
-      if (dperp > delta2          // perpendicular distance to midpoint too big
-          || dpara * dpara > 0.09 // projected midpoint too far from segment midpoint
-          || a0 * a1 + b0 * b1 + c0 * c1 < cosMinDistance) { // angular distance too big
-
-        // recursively bisect
-        resampleLineTo(x0, y0, lon0, a0, b0, c0, xm, ym, lonm, am, bm, cm, depth, stream);
-        stream.point(xm, ym);
-        resampleLineTo(xm, ym, lonm, am, bm, cm, x1, y1, lon1, a1, b1, c1, depth, stream);
+      // if midpoint outside box or arclength too long, recursively bisect
+      if (midpointTooFar(p0, pm, p1) || cartesianDot(c0, c1) < cosMinDistance) {
+        resampleLineTo(p0, lon0, c0, pm, lonm, cm, depth, stream);
+        stream.point(pm[0], pm[1]);
+        resampleLineTo(pm, lonm, cm, p1, lon1, c1, depth, stream);
       }
     }
   }
   return function(stream) {
-    var lambda00, x00, y00, a00, b00, c00, // first point
-        lambda0, x0, y0, a0, b0, c0; // previous point
+    var lambda00, p00, c00, // first point
+        lambda0, p0, c0; // previous point
 
     var resampleStream = {
       point: point,
@@ -84,15 +82,15 @@ function resample(project, delta2) {
     }
 
     function lineStart() {
-      x0 = NaN;
+      p0 = [NaN, NaN];
       resampleStream.point = linePoint;
       stream.lineStart();
     }
 
     function linePoint(lambda, phi) {
       var c = cartesian([lambda, phi]), p = project(lambda, phi);
-      resampleLineTo(x0, y0, lambda0, a0, b0, c0, x0 = p[0], y0 = p[1], lambda0 = lambda, a0 = c[0], b0 = c[1], c0 = c[2], maxDepth, stream);
-      stream.point(x0, y0);
+      resampleLineTo(p0, lambda0, c0, p0 = p, lambda0 = lambda, c0 = c, maxDepth, stream);
+      stream.point(p0[0], p0[1]);
     }
 
     function lineEnd() {
@@ -107,12 +105,12 @@ function resample(project, delta2) {
     }
 
     function ringPoint(lambda, phi) {
-      linePoint(lambda00 = lambda, phi), x00 = x0, y00 = y0, a00 = a0, b00 = b0, c00 = c0;
+      linePoint(lambda00 = lambda, phi), p00 = p0, c00 = c0;
       resampleStream.point = linePoint;
     }
 
     function ringEnd() {
-      resampleLineTo(x0, y0, lambda0, a0, b0, c0, x00, y00, lambda00, a00, b00, c00, maxDepth, stream);
+      resampleLineTo(p0, lambda0, c0, p00, lambda00, c00, maxDepth, stream);
       resampleStream.lineEnd = lineEnd;
       lineEnd();
     }
