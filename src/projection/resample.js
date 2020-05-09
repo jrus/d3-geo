@@ -53,11 +53,16 @@ function resample(project, delta2) {
           [lonm, latm] = planisphere.inverse(sm),
           pm = project(lonm, latm); // projected midpoint
       
-      // make sure we bisect until smaller than ~28 degree segments
-      var distp = distance2(s0, s1) * 16,
-          distq = distanceDenom2(s0, s1);
+      // set minDepth to guarantee we bisect until smaller than ~28 degree segments
+      var distp = distance2(s0, sm) * 64,
+          distq = distanceDenom2(s0, sm);
+      if (distp === Infinity) { // edgecase where one point is at infinity
+        distp = 64;
+        distq = Math.min(s0[0] * s0[0] + s0[1] * s0[1], sm[0] * sm[0] + sm[1] * sm[1]);
+      }
+      var minDepth = (distp > distq) + (distp > distq * 4) + (distp > distq * 16);
       
-      if (midpointTooFar(p0, pm, p1, delta2) || (distp > distq)) {
+      if ((minDepth -= minDepth > 0) || midpointTooFar(p0, pm, p1, delta2)) {
         var interp = raterp(s0, sm, s1); // set up interpolation function
 
         resampleFromInterp(p0, 0, pm, 0.5, interp, (distp > distq * 4), depth, stream);
@@ -67,16 +72,17 @@ function resample(project, delta2) {
     }
   }
   
-  function resampleFromInterp(p0, t0, p1, t1, interp, forceOneBisection, depth, stream) {
+  function resampleFromInterp(p0, t0, p1, t1, interp, minDepth, depth, stream) {
     if (distance2(p0, p1) > 4 * delta2 && depth--) {
       var tm = 0.5 * (t0 + t1),
           [lonm, latm] = planisphere.inverse(interp(tm)),
           pm = project(lonm, latm); // projected midpoint
 
-      if (midpointTooFar(p0, pm, p1, delta2) || forceOneBisection) {
-        resampleFromInterp(p0, t0, pm, tm, interp, 0, depth, stream);
+      if ((minDepth -= minDepth > 0) || midpointTooFar(p0, pm, p1, delta2)) {
+        
+        resampleFromInterp(p0, t0, pm, tm, interp, minDepth, depth, stream);
         stream.point(pm[0], pm[1]);
-        resampleFromInterp(pm, tm, p1, t1, interp, 0, depth, stream);
+        resampleFromInterp(pm, tm, p1, t1, interp, minDepth, depth, stream);
       }
     } 
   }
