@@ -1,9 +1,7 @@
-import {planisphere, midpoint} from "../planisphere.js";
-import {tan, radians} from "../math.js";
+import {planisphere, midpoint, raterp} from "../planisphere.js";
 import {transformer} from "../transform.js";
 
-var maxDepth = 16, // maximum depth of subdivision
-    stereoMinDistance = tan(30 * 0.5 * radians);
+var maxDepth = 16; // maximum depth of subdivision
 
 export default function(project, delta2) {
   return +delta2 ? resample(project, delta2) : resampleNone(project);
@@ -46,7 +44,6 @@ function resample(project, delta2) {
   function distanceDenom2(a, b) {
     var d1 = 1 + a[0] * b[0] + a[1] + b[1],
         dI = a[0] * b[1] - a[1] * b[0];
-    
     return d1 * d1 + dI * dI;
   }
   
@@ -56,15 +53,34 @@ function resample(project, delta2) {
           [lonm, latm] = planisphere.inverse(sm),
           pm = project(lonm, latm); // projected midpoint
       
-      if (midpointTooFar(p0, pm, p1, delta2)
-          || distance2(s0, s1) > stereoMinDistance * distanceDenom2(s0, s1)) {
+      // make sure we bisect until smaller than ~28 degree segments
+      var distp = distance2(s0, s1) * 16,
+          distq = distanceDenom2(s0, s1);
+      
+      if (midpointTooFar(p0, pm, p1, delta2) || (distp > distq)) {
+        var interp = raterp(s0, sm, s1); // set up interpolation function
 
-        resampleLineTo(p0, s0, pm, sm, depth, stream);
+        resampleFromInterp(p0, 0, pm, 0.5, interp, (distp > distq * 4), depth, stream);
         stream.point(pm[0], pm[1]);
-        resampleLineTo(pm, sm, p1, s1, depth, stream);
+        resampleFromInterp(pm, 0.5, p1, 1, interp, (distp > distq * 4), depth, stream);
       }
     }
   }
+  
+  function resampleFromInterp(p0, t0, p1, t1, interp, forceOneBisection, depth, stream) {
+    if (distance2(p0, p1) > 4 * delta2 && depth--) {
+      var tm = 0.5 * (t0 + t1),
+          [lonm, latm] = planisphere.inverse(interp(tm)),
+          pm = project(lonm, latm); // projected midpoint
+
+      if (midpointTooFar(p0, pm, p1, delta2) || forceOneBisection) {
+        resampleFromInterp(p0, t0, pm, tm, interp, 0, depth, stream);
+        stream.point(pm[0], pm[1]);
+        resampleFromInterp(pm, tm, p1, t1, interp, 0, depth, stream);
+      }
+    } 
+  }
+  
   
   return function(stream) {
     var p00, s00, // first point
