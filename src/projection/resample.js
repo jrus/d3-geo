@@ -47,27 +47,29 @@ function resample(project, delta2) {
     return d1 * d1 + dI * dI;
   }
   
+  // compute how many bisections will be needed to make sure
+  // every segment has arclength at least ~30 degrees
+  function minBisections(a, m) {
+    var distp = distance2(a, m) * 64,
+        distq = distanceDenom2(a, m);
+    if (distp === Infinity) { // edgecase where one point is at infinity
+      distp = 64;
+      distq = Math.min(a[0] * a[0] + a[1] * a[1], m[0] * m[0] + m[1] * m[1]);
+    }
+    return (distp > distq) + (distp > distq * 4) + (distp > distq * 16);
+  }
+  
   function resampleLineTo(p0, s0, p1, s1, depth, stream) {
     if (distance2(p0, p1) > 4 * delta2 && depth--) {
       var sm = midpoint(s0, s1),
           [lonm, latm] = planisphere.inverse(sm),
-          pm = project(lonm, latm); // projected midpoint
-      
-      // set minDepth to guarantee we bisect until smaller than ~28 degree segments
-      var distp = distance2(s0, sm) * 64,
-          distq = distanceDenom2(s0, sm);
-      if (distp === Infinity) { // edgecase where one point is at infinity
-        distp = 64;
-        distq = Math.min(s0[0] * s0[0] + s0[1] * s0[1], sm[0] * sm[0] + sm[1] * sm[1]);
-      }
-      var minDepth = (distp > distq) + (distp > distq * 4) + (distp > distq * 16);
-      
-      if ((minDepth -= minDepth > 0) || midpointTooFar(p0, pm, p1, delta2)) {
-        var interp = raterp(s0, sm, s1); // set up interpolation function
-
-        resampleFromInterp(p0, 0, pm, 0.5, interp, (distp > distq * 4), depth, stream);
+          pm = project(lonm, latm),
+          minDepth = minBisections(s0, sm);
+      if (minDepth || midpointTooFar(p0, pm, p1, delta2)) {
+        var interp = raterp(s0, sm, s1);
+        resampleFromInterp(p0, 0, pm, 0.5, interp, minDepth -= (minDepth > 0), depth, stream);
         stream.point(pm[0], pm[1]);
-        resampleFromInterp(pm, 0.5, p1, 1, interp, (distp > distq * 4), depth, stream);
+        resampleFromInterp(pm, 0.5, p1, 1, interp, minDepth, depth, stream);
       }
     }
   }
@@ -76,11 +78,9 @@ function resample(project, delta2) {
     if (distance2(p0, p1) > 4 * delta2 && depth--) {
       var tm = 0.5 * (t0 + t1),
           [lonm, latm] = planisphere.inverse(interp(tm)),
-          pm = project(lonm, latm); // projected midpoint
-
-      if ((minDepth -= minDepth > 0) || midpointTooFar(p0, pm, p1, delta2)) {
-        
-        resampleFromInterp(p0, t0, pm, tm, interp, minDepth, depth, stream);
+          pm = project(lonm, latm);
+      if (minDepth || midpointTooFar(p0, pm, p1, delta2)) {
+        resampleFromInterp(p0, t0, pm, tm, interp, minDepth -= (minDepth > 0), depth, stream);
         stream.point(pm[0], pm[1]);
         resampleFromInterp(pm, tm, p1, t1, interp, minDepth, depth, stream);
       }
