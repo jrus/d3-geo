@@ -48,15 +48,15 @@ function resample(project, delta2) {
         dy = ym - ya,
         d1 = 1 + xa * xm + ya + ym,
         dI = xa * ym - xm * ya,
-        // The square of 8 times the stereographic distance from a to m is distp / distq    
-        distp = 64 * (dx * dx + dy * dy),
+        // The square of the stereographic distance from a to m is distp / distq    
+        distp = (dx * dx + dy * dy),
         distq = d1 * d1 + dI * dI;
     if (distp === Infinity) { // edgecase where one point is at infinity
-      distp = 64;
+      distp = 1;
       distq = Math.min(xa * xa + ya * ya, xm * xm + ym * ym);
     }
     // equivalent to max(3, min(0, ceil(log2(stereodistance(a, m) * 8))))
-    return (distp > distq) + (distp > distq * 4) + (distp > distq * 16);
+    return (64 * distp > distq) + (16 * distp > distq) + (4 * distp > distq);
   }
   
   function resampleLineTo(p0, s0, p1, s1, depth, stream) {
@@ -88,7 +88,8 @@ function resample(project, delta2) {
   }
   
   return function(stream) {
-    var p00, s00, // first point
+    var nullPoint = [NaN, NaN],
+        p00, s00, // first point
         p0, s0;   // previous point
 
     var resampleStream = {
@@ -105,7 +106,7 @@ function resample(project, delta2) {
     }
 
     function lineStart() {
-      p0 = [NaN, NaN]; // notice that distance2(p0, p) > 4 * delta2 will be false for this p0
+      p0 = nullPoint; // notice that distance2(p0, p) > 4 * delta2 will be false for this p0
       resampleStream.point = linePoint;
       stream.lineStart();
     }
