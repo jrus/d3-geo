@@ -1,9 +1,9 @@
-import {cartesian, cartesianDot, cartesianMidpoint} from "../cartesian.js";
-import {abs, asin, atan2, cos, epsilon, radians} from "../math.js";
+import {planisphere, midpoint} from "../planisphere.js";
+import {tan, radians} from "../math.js";
 import {transformer} from "../transform.js";
 
 var maxDepth = 16, // maximum depth of subdivision
-    cosMinDistance = cos(30 * radians); // cos(minimum angular distance)
+    stereoMinDistance = tan(30 * 0.5 * radians);
 
 export default function(project, delta2) {
   return +delta2 ? resample(project, delta2) : resampleNone(project);
@@ -40,27 +40,35 @@ function resample(project, delta2) {
         dy = b[1] - a[1];
     return dx * dx + dy * dy;
   }
-
-  function resampleLineTo(p0, lon0, c0, p1, lon1, c1, depth, stream) {
+  
+  // The square of the stereographic distance from a to b is
+  // distance2(a, b) / distanceDenom2(a, b)
+  function distanceDenom2(a, b) {
+    var d1 = 1 + a[0] * b[0] + a[1] + b[1],
+        dI = a[0] * b[1] - a[1] * b[0];
+    
+    return d1 * d1 + dI * dI;
+  }
+  
+  function resampleLineTo(p0, s0, p1, s1, depth, stream) {
     if (distance2(p0, p1) > 4 * delta2 && depth--) {
-      var cm = cartesianMidpoint(c0, c1),
-          lonm = atan2(cm[1], cm[0]), // geo coordinates of midpoint
-          latm = asin(cm[2]);
-      // fix edge case for midpoint near north/south pole or very close longitudes
-      if ((1 - cm[2] * cm[2]) < 2 * epsilon || abs(lon1 - lon0) < epsilon)
-        lonm = 0.5 * (lon0 + lon1);
-      var pm = project(lonm, latm);
-      if (midpointTooFar(p0, pm, p1) || cartesianDot(c0, c1) < cosMinDistance) {
-        resampleLineTo(p0, lon0, c0, pm, lonm, cm, depth, stream);
+      var sm = midpoint(s0, s1),
+          [lonm, latm] = planisphere.inverse(sm),
+          pm = project(lonm, latm); // projected midpoint
+      
+      if (midpointTooFar(p0, pm, p1, delta2)
+          || distance2(s0, s1) > stereoMinDistance * distanceDenom2(s0, s1)) {
+
+        resampleLineTo(p0, s0, pm, sm, depth, stream);
         stream.point(pm[0], pm[1]);
-        resampleLineTo(pm, lonm, cm, p1, lon1, c1, depth, stream);
+        resampleLineTo(pm, sm, p1, s1, depth, stream);
       }
     }
   }
   
   return function(stream) {
-    var lambda00, p00, c00, // first point
-        lambda0, p0, c0;    // previous point
+    var p00, s00, // first point
+        p0, s0;   // previous point
 
     var resampleStream = {
       point: point,
@@ -76,15 +84,15 @@ function resample(project, delta2) {
     }
 
     function lineStart() {
-      p0 = [NaN, NaN];
+      p0 = [NaN, NaN]; // notice that distance2(p0, p) > 4 * delta2 will be false for this p0
       resampleStream.point = linePoint;
       stream.lineStart();
     }
 
-    function linePoint(lambda, phi) {
-      var c = cartesian([lambda, phi]),
-          p = project(lambda, phi);
-      resampleLineTo(p0, lambda0, c0, p0 = p, lambda0 = lambda, c0 = c, maxDepth, stream);
+    function linePoint(lon, lat) {
+      var s = planisphere([lon, lat]),
+          p = project(lon, lat);
+      resampleLineTo(p0, s0, p0 = p, s0 = s, maxDepth, stream);
       stream.point(p[0], p[1]);
     }
 
@@ -99,13 +107,13 @@ function resample(project, delta2) {
       resampleStream.lineEnd = ringEnd;
     }
 
-    function ringPoint(lambda, phi) {
-      linePoint(lambda00 = lambda, phi), p00 = p0, c00 = c0;
+    function ringPoint(lon, lat) {
+      linePoint(lon, lat), p00 = p0, s00 = s0;
       resampleStream.point = linePoint;
     }
 
     function ringEnd() {
-      resampleLineTo(p0, lambda0, c0, p00, lambda00, c00, maxDepth, stream);
+      resampleLineTo(p0, s0, p00, s00, maxDepth, stream);
       resampleStream.lineEnd = lineEnd;
       lineEnd();
     }

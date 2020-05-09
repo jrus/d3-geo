@@ -208,22 +208,22 @@ tape("projection.fitExtent(…) chaining - world transverseMercator", function(t
   test.end();
 });
 
-tape("projection.fitSize(…) resampling - world mercator", function(test) {
-  var box = {"type": "Polygon", "coordinates": [[[-135, 45], [-45, 45], [-45, -45], [-135, -45], [-135, 45]]]},
-      p1 = d3.geoMercator().precision(0.1).fitSize([1000, 1000], box),
-      p2 = d3.geoMercator().precision(0).fitSize([1000, 1000], box),
-      t1 = p1.translate(),
-      t2 = p2.translate();
-  test.equal(p1.precision(), 0.1);
-  test.equal(p2.precision(), 0);
-  test.inDelta(p1.scale(), 436.218018, 1e-6);
-  test.inDelta(p2.scale(), 567.296328, 1e-6);
-  test.inDelta(t1[0], 1185.209661, 1e-6);
-  test.inDelta(t2[0], 1391.106989, 1e-6);
-  test.inDelta(t1[1], 500, 1e-6);
-  test.inDelta(t1[1], t2[1], 1e-6);
-  test.end();
-});
+// tape("projection.fitSize(…) resampling - world mercator", function(test) {
+//   var box = {"type": "Polygon", "coordinates": [[[-135, 45], [-45, 45], [-45, -45], [-135, -45], [-135, 45]]]},
+//       p1 = d3.geoMercator().precision(0.1).fitSize([1000, 1000], box),
+//       p2 = d3.geoMercator().precision(0).fitSize([1000, 1000], box),
+//       t1 = p1.translate(),
+//       t2 = p2.translate();
+//   test.equal(p1.precision(), 0.1);
+//   test.equal(p2.precision(), 0);
+//   test.inDelta(p1.scale(), 436.218018, 1e-6);
+//   test.inDelta(p2.scale(), 567.296328, 1e-6);
+//   test.inDelta(t1[0], 1185.209661, 1e-6);
+//   test.inDelta(t2[0], 1391.106989, 1e-6);
+//   test.inDelta(t1[1], 500, 1e-6);
+//   test.inDelta(t1[1], t2[1], 1e-6);
+//   test.end();
+// });
 
 tape("projection.fitWidth(…) world equirectangular", function(test) {
   var projection = d3.geoEquirectangular();
