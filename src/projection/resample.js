@@ -38,24 +38,24 @@ function resample(project, delta2) {
         dy = b[1] - a[1];
     return dx * dx + dy * dy;
   }
-  
-  // The square of the stereographic distance from a to b is
-  // distance2(a, b) / distanceDenom2(a, b)
-  function distanceDenom2(a, b) {
-    var d1 = 1 + a[0] * b[0] + a[1] + b[1],
-        dI = a[0] * b[1] - a[1] * b[0];
-    return d1 * d1 + dI * dI;
-  }
-  
+    
   // compute how many bisections will be needed to make sure
-  // every segment has arclength at least ~30 degrees
+  // every segment has arclength at least ~28 degrees
   function minBisections(a, m) {
-    var distp = distance2(a, m) * 64,
-        distq = distanceDenom2(a, m);
+    var xa = a[0], ya = a[1],
+        xm = m[0], ym = m[1],
+        dx = xm - xa,
+        dy = ym - ya,
+        d1 = 1 + xa * xm + ya + ym,
+        dI = xa * ym - xm * ya,
+        // The square of 8 times the stereographic distance from a to m is distp / distq    
+        distp = 64 * (dx * dx + dy * dy),
+        distq = d1 * d1 + dI * dI;
     if (distp === Infinity) { // edgecase where one point is at infinity
       distp = 64;
-      distq = Math.min(a[0] * a[0] + a[1] * a[1], m[0] * m[0] + m[1] * m[1]);
+      distq = Math.min(xa * xa + ya * ya, xm * xm + ym * ym);
     }
+    // equivalent to max(3, min(0, ceil(log2(stereodistance(a, m) * 8))))
     return (distp > distq) + (distp > distq * 4) + (distp > distq * 16);
   }
   
@@ -86,7 +86,6 @@ function resample(project, delta2) {
       }
     } 
   }
-  
   
   return function(stream) {
     var p00, s00, // first point
