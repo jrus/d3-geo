@@ -1,4 +1,4 @@
-import {atan, atan2, cos, degrees, hypot, radians, sin, sqrt, tan} from "./math.js";
+import {atan, atan2, cos, degrees, halfPi, hypot, radians, sin, sqrt, tan} from "./math.js";
 
 var planisphere = function planisphere([longitude, latitude]) {
   longitude *= radians;
@@ -12,6 +12,17 @@ planisphere.inverse = function planisphereinverse([X, Y]) {
   return [longitude, latitude];
 };
 
+
+var planisphereRadians = function planisphere([longitude, latitude]) {
+  const stereo_radius = tan(0.5 * (halfPi + latitude));
+  return [cos(longitude) * stereo_radius, sin(longitude) * stereo_radius];
+}
+
+planisphereRadians.inverse = function planisphereinverse([X, Y]) {
+  const longitude = atan2(Y, X);
+  const latitude = 2 * atan(hypot(X, Y)) - halfPi;
+  return [longitude, latitude];
+};
 
 // stereographic midpoint
 var midpoint = (function () {
@@ -147,4 +158,4 @@ var raterp = function raterp(a, m, b) {
 }
 
 
-export {midpoint, planisphere, raterp};
+export {midpoint, planisphere, planisphereRadians, raterp};

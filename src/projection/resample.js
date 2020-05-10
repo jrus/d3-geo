@@ -1,4 +1,4 @@
-import {planisphere, midpoint, raterp} from "../planisphere.js";
+import {planisphereRadians, midpoint, raterp} from "../planisphere.js";
 import {atan, atan2, hypot, pi} from "../math.js";
 import {transformer} from "../transform.js";
 
@@ -63,8 +63,7 @@ function resample(project, delta2) {
   function resampleLineTo(p0, s0, p1, s1, depth, stream) {
     if (distance2(p0, p1) > 4 * delta2 && depth--) {
       var sm = midpoint(s0, s1),
-          lonm = atan2(sm[1], sm[0]),
-          latm = 2 * atan(hypot(sm[0], sm[1])) - 0.5*pi,
+          [lonm, latm] = planisphereRadians.inverse(sm),
           pm = project(lonm, latm),
           minDepth = minBisections(s0, sm);
       if (minDepth || midpointTooFar(p0, pm, p1)) {
@@ -80,8 +79,7 @@ function resample(project, delta2) {
     if (distance2(p0, p1) > 4 * delta2 && depth--) {
       var tm = 0.5 * (t0 + t1),
           sm = interp(tm),
-          lonm = atan2(sm[1], sm[0]),
-          latm = 2 * atan(hypot(sm[0], sm[1])) - 0.5*pi,
+          [lonm, latm] = planisphereRadians.inverse(sm),
           pm = project(lonm, latm);
       if (minDepth || midpointTooFar(p0, pm, p1)) {
         resampleFromInterp(p0, t0, pm, tm, interp, minDepth -= (minDepth > 0), depth, stream);
@@ -116,7 +114,7 @@ function resample(project, delta2) {
     }
 
     function linePoint(lon, lat) {
-      var s = planisphere([lon, lat]),
+      var s = planisphereRadians([lon, lat]),
           p = project(lon, lat);
       resampleLineTo(p0, s0, p0 = p, s0 = s, maxDepth, stream);
       stream.point(p[0], p[1]);
