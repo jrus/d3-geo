@@ -1,4 +1,5 @@
 import {planisphere, midpoint, raterp} from "../planisphere.js";
+import {atan, atan2, hypot, pi} from "../math.js";
 import {transformer} from "../transform.js";
 
 var maxDepth = 16; // maximum depth of subdivision
@@ -38,7 +39,7 @@ function resample(project, delta2) {
         dy = b[1] - a[1];
     return dx * dx + dy * dy;
   }
-    
+
   // compute how many bisections will be needed to make sure
   // every segment has arclength at least ~28 degrees
   function minBisections(a, m) {
@@ -49,23 +50,24 @@ function resample(project, delta2) {
         d1 = 1 + xa * xm + ya + ym,
         dI = xa * ym - xm * ya,
         // The square of the stereographic distance from a to m is distp / distq    
-        distp = (dx * dx + dy * dy),
+        distp = dx * dx + dy * dy,
         distq = d1 * d1 + dI * dI;
-    if (distp === Infinity) { // edgecase where one point is at infinity
+    if (distp > 1e100) { // edgecase where one point is at infinity
       distp = 1;
       distq = Math.min(xa * xa + ya * ya, xm * xm + ym * ym);
     }
     // equivalent to max(3, min(0, ceil(log2(stereodistance(a, m) * 8))))
     return (64 * distp > distq) + (16 * distp > distq) + (4 * distp > distq);
   }
-  
+
   function resampleLineTo(p0, s0, p1, s1, depth, stream) {
     if (distance2(p0, p1) > 4 * delta2 && depth--) {
       var sm = midpoint(s0, s1),
-          [lonm, latm] = planisphere.inverse(sm),
+          lonm = atan2(sm[1], sm[0]),
+          latm = 2 * atan(hypot(sm[0], sm[1])) - 0.5*pi,
           pm = project(lonm, latm),
           minDepth = minBisections(s0, sm);
-      if (minDepth || midpointTooFar(p0, pm, p1, delta2)) {
+      if (minDepth || midpointTooFar(p0, pm, p1)) {
         var interp = raterp(s0, sm, s1);
         resampleFromInterp(p0, 0, pm, 0.5, interp, minDepth -= (minDepth > 0), depth, stream);
         stream.point(pm[0], pm[1]);
@@ -73,20 +75,22 @@ function resample(project, delta2) {
       }
     }
   }
-  
+
   function resampleFromInterp(p0, t0, p1, t1, interp, minDepth, depth, stream) {
     if (distance2(p0, p1) > 4 * delta2 && depth--) {
       var tm = 0.5 * (t0 + t1),
-          [lonm, latm] = planisphere.inverse(interp(tm)),
+          sm = interp(tm),
+          lonm = atan2(sm[1], sm[0]),
+          latm = 2 * atan(hypot(sm[0], sm[1])) - 0.5*pi,
           pm = project(lonm, latm);
-      if (minDepth || midpointTooFar(p0, pm, p1, delta2)) {
+      if (minDepth || midpointTooFar(p0, pm, p1)) {
         resampleFromInterp(p0, t0, pm, tm, interp, minDepth -= (minDepth > 0), depth, stream);
         stream.point(pm[0], pm[1]);
         resampleFromInterp(pm, tm, p1, t1, interp, minDepth, depth, stream);
       }
     } 
   }
-  
+
   return function(stream) {
     var nullPoint = [NaN, NaN],
         p00, s00, // first point
